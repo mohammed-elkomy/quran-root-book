@@ -7,11 +7,12 @@ from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import TableStyle
 
-from config import GENERAL_ARABIC_FONT, QURAN_FONT_SIZE, QURAN_LINE_SPACING, GENERAL_ENGLISH_FONT, GENERAL_FONT_SIZE, TRANSLATION_LINE_SPACING, HEADER_PADDING, TABLE_PADDING, TABLE_BK_COLOR, QURAN_ROW_SEPARATOR, ROOT_HEADER_BK_COLOR, ROOT_BG_COLOR, ROOT_BORDER_COLOR
+from config import GENERAL_ARABIC_FONT, QURAN_FONT_SIZE, QURAN_LINE_SPACING, GENERAL_ENGLISH_FONT, GENERAL_FONT_SIZE, TRANSLATION_LINE_SPACING, HEADER_PADDING, TABLE_PADDING, TABLE_BK_COLOR, QURAN_ROW_SEPARATOR, ROOT_HEADER_BK_COLOR, ROOT_BG_COLOR, ROOT_BORDER_COLOR, SINGLE_COLUMN
 from config import IS_ARABIC
 
 
 def get_root_subtable_style():
+    target_cell = 3 if SINGLE_COLUMN else 1
     return [
         ('VALIGN', (0, 0), (-1, 0), 'BOTTOM'),
         ('VALIGN', (0, 1), (-1, 1), 'TOP'),
@@ -21,8 +22,8 @@ def get_root_subtable_style():
         ('BOTTOMPADDING', (0, 1), (-1, 1), 2 if IS_ARABIC else 1),
         ('TOPPADDING', (0, 0), (-1, 0), -10 if IS_ARABIC else 1),
 
-        ('BACKGROUND', (1, 0), (1, -1), ROOT_BG_COLOR),
-        ('BOX', (1, 0), (1, -1), 1, ROOT_BORDER_COLOR)
+        ('BACKGROUND', (target_cell, 0), (target_cell, -1), ROOT_BG_COLOR),
+        ('BOX', (target_cell, 0), (target_cell, -1), 1, ROOT_BORDER_COLOR)
     ]
 
 
@@ -52,14 +53,13 @@ def generate_style_per_entry(fill_data, ):
             table_style.add('BACKGROUND', (0, font_row_idx), (-1, font_row_idx), TABLE_BK_COLOR)
             table_style.add('FONTNAME', (0, font_row_idx), (-1, font_row_idx), general_font)
             table_style.add('FONTSIZE', (0, font_row_idx), (-1, font_row_idx), GENERAL_FONT_SIZE)
-            # table_style.add('FONTSIZE', (0, font_row_idx), (-1, font_row_idx), GENERAL_FONT_SIZE)
         else:
             for col_idx, _ in enumerate(row):
                 table_style.add('BACKGROUND', (col_idx, font_row_idx), (col_idx, font_row_idx), TABLE_BK_COLOR)
                 table_style.add('LINEABOVE', (col_idx, font_row_idx), (col_idx, font_row_idx), 0.05, colors.black if QURAN_ROW_SEPARATOR else colors.transparent)
-                # table_style.add('LINEABOVE', (col_idx, font_row_idx), (col_idx, font_row_idx), 0.0, colors.transparent)
-                table_style.add('SPAN', (3, font_row_idx), (4, font_row_idx)) # todo single column
-                table_style.add('SPAN', (10, font_row_idx), (11, font_row_idx))
+                table_style.add('SPAN', (3, font_row_idx), (3, font_row_idx))
+                if not SINGLE_COLUMN:
+                    table_style.add('SPAN', (10, font_row_idx), (11, font_row_idx))
                 table_style.add('ALIGN', (0, font_row_idx), (-1, font_row_idx), 'CENTER')
     return table_style
 
@@ -87,7 +87,7 @@ def generate_styles():
     font_name = GENERAL_ARABIC_FONT if IS_ARABIC else GENERAL_ENGLISH_FONT
 
     # Define the shared styles for numerals and sura names
-    numeral_style = ParagraphStyle(
+    centered_numeral_style = ParagraphStyle(
         'numeral',
         fontName=font_name,
         fontSize=GENERAL_FONT_SIZE,
@@ -95,7 +95,7 @@ def generate_styles():
         splitLongWords=False,
     )
 
-    centered_eng_style = ParagraphStyle(
+    centered_text_eng_style = ParagraphStyle(
         'centered_style_eng',
         fontName=GENERAL_ENGLISH_FONT,
         fontSize=GENERAL_FONT_SIZE,
@@ -112,7 +112,7 @@ def generate_styles():
         splitLongWords=False,
     )
 
-    centered_ar_style = ParagraphStyle(
+    centered_text_ar_style = ParagraphStyle(
         'centered_style_ar',
         fontName=GENERAL_ARABIC_FONT,
         fontSize=GENERAL_FONT_SIZE,
@@ -120,7 +120,7 @@ def generate_styles():
         splitLongWords=False,
     )
 
-    trans_style = ParagraphStyle(
+    translation_style = ParagraphStyle(
         'left_aligned_style',
         fontName=GENERAL_ENGLISH_FONT,
         fontSize=GENERAL_FONT_SIZE,
@@ -130,39 +130,49 @@ def generate_styles():
         allowWidows=False,
     )
 
-    return numeral_style, centered_eng_style, english_root_style, centered_ar_style, trans_style
+    return {
+        'centered_numeral_style': centered_numeral_style,
+        'centered_text_eng_style': centered_text_eng_style,
+        'english_root_style': english_root_style,
+        'centered_text_ar_style': centered_text_ar_style,
+        'translation_style': translation_style
+    }
 
 
 def get_generic_table_style():
-    return [
+    single_column = [
         # row 0
         ('SPAN', (0, 0), (-1, 0)),
-
         # row 1
         ('ALIGN', (0, 1), (-1, 1), "CENTER"),
         ('ALIGN', (3, 1), (4, 1), "RIGHT"),
-        ('ALIGN', (10, 1), (11, 1), "RIGHT"),
+
         ('LINEABOVE', (0, 1), (-1, 1), 0.5, colors.black),
         ('LINEBELOW', (0, 1), (4, 1), 0.5, colors.black),
-        ('LINEBELOW', (7, 1), (-1, 1), 0.5, colors.black),
-
-        ('LINEAFTER', (5, 0), (5, -1), 1, colors.darkred), # todo single column
-        ('LINEBEFORE', (6, 0), (6, -1), 1, colors.darkred),
         ('RIGHTPADDING', (4, 0), (4, -1), 1),
+        ('LEFTPADDING', (0, 0), (0, -1), 1),
+        ('BOTTOMPADDING', (0, 0), (-1, 1), HEADER_PADDING),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), TABLE_PADDING),
+        ('TOPPADDING', (0, 0), (-1, -1), TABLE_PADDING),
+        ('INNERGRID', (0, 2), (-1, -2), 0.5, colors.transparent),
+
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+    ]
+
+    double_columns = [
+        ('ALIGN', (10, 1), (11, 1), "RIGHT"),
+        ('LINEBELOW', (7, 1), (-1, 1), 0.5, colors.black),
+        ('LINEAFTER', (5, 0), (5, -1), 1, colors.darkred),
+        ('LINEBEFORE', (6, 0), (6, -1), 1, colors.darkred),
         ('LEFTPADDING', (7, 0), (7, -1), 1),
         ('RIGHTPADDING', (5, 0), (5, -1), 0),
         ('LEFTPADDING', (5, 0), (5, -1), 0),
         ('RIGHTPADDING', (6, 0), (6, -1), 0),
         ('LEFTPADDING', (6, 0), (6, -1), 0),
-        ('LEFTPADDING', (0, 0), (0, -1), 1),
         ('RIGHTPADDING', (11, 0), (12, -1), 1),
-        ('BOTTOMPADDING', (0, 0), (-1, 1), HEADER_PADDING),
-        ('BOTTOMPADDING', (0, 1), (-1, -1), TABLE_PADDING),
-        ('TOPPADDING', (0, 0), (-1, -1), TABLE_PADDING),
-        ('INNERGRID', (0, 2), (-1, -2), 0.5, colors.transparent),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
     ]
+    return single_column + ([] if SINGLE_COLUMN else double_columns)
+
 
 def get_padding_table_style():
     return [("FONTSIZE", (0, 0), (-1, -1), 1)]
-

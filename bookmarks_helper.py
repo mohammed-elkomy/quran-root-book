@@ -2,7 +2,7 @@ from collections import defaultdict
 
 from reportlab.platypus import Table
 
-from config import IS_ARABIC, ROOT_BG_COLOR
+from config import IS_ARABIC, ROOT_BG_COLOR, SINGLE_COLUMN
 
 
 # Simulate the nested dictionary structure
@@ -50,15 +50,17 @@ def add_page_bookmarks(canvas, doc, bookmarks_lookup):
 
 
 def extract_root_tables_from_super_table(table, ):
-    found_tables = []
+    root_tables_cols_num = 7 if SINGLE_COLUMN else 3
+    center_idx = root_tables_cols_num // 2
+    found_root_subtables = []
     for row in table._cellvalues:
         for cell in row:
             for element in cell:
-                if isinstance(element, Table) and element._ncols == 3 and element._bkgrndcmds[-1][-1] == ROOT_BG_COLOR: # todo single column
-                    found_tables.append(element)
+                if isinstance(element, Table) and element._ncols == root_tables_cols_num and element._bkgrndcmds[-1][-1] == ROOT_BG_COLOR:
+                    found_root_subtables.append(element)
     roots_in_page = []
-    for table in found_tables:
-        root_text = table._cellvalues[1 if IS_ARABIC else 0][1][0].text
-        font_name = table._cellvalues[1 if IS_ARABIC else 0][1][0].style.fontName
+    for table in found_root_subtables:
+        root_text = table._cellvalues[1 if IS_ARABIC else 0][center_idx][0].text
+        font_name = table._cellvalues[1 if IS_ARABIC else 0][center_idx][0].style.fontName
         roots_in_page.append((font_name, root_text))
     return roots_in_page

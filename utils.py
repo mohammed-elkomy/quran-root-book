@@ -15,7 +15,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph
 
-from config import DATA_REPEAT_MULTIPLIER, INPUT_DATA
+from config import DATA_REPEAT_MULTIPLIER, INPUT_DATA, SINGLE_COLUMN
 from config import IS_ARABIC
 from quran_data import load_quran_meta
 
@@ -67,7 +67,7 @@ def load_source_data(path):
     for root_group in root_groups:
         root_groups[root_group].sort(key=lambda x: (x["sura_no"], x["aya_no"]))
         root_groups[root_group] *= DATA_REPEAT_MULTIPLIER
-        if len(root_groups[root_group]) % 2 == 1:
+        if not SINGLE_COLUMN and len(root_groups[root_group]) % 2 == 1:
             default_entry = defaultdict(lambda: None)
             default_entry["sura_name_ar"] = default_entry["sura_name_en"] = default_entry["word"] = default_entry["word_en"] = ""
             root_groups[root_group].append(default_entry)

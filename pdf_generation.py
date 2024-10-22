@@ -12,7 +12,7 @@ from reportlab.platypus.doctemplate import _doNothing
 from tqdm import tqdm
 
 from bookmarks_helper import extract_root_tables_from_super_table, add_page_bookmarks
-from config import GENERAL_ARABIC_FONT, GENERAL_TABLE_RATIOS, PDF_TITLE, PDF_AUTHOR, PDF_SUBJECT, PDF_KEYWORDS, PDF_CREATOR
+from config import GENERAL_ARABIC_FONT, GENERAL_TABLE_RATIOS_SINGLE, GENERAL_TABLE_RATIOS_DOUBLE, PDF_TITLE, PDF_AUTHOR, PDF_SUBJECT, PDF_KEYWORDS, PDF_CREATOR, SINGLE_COLUMN
 from config import IS_ARABIC
 from headers_helpers import generate_columns_header, generate_root_header
 from quran_data import load_translation, create_font_text_mapping
@@ -52,7 +52,12 @@ def get_root_subtable(root_text, root_style, eng_word_style):
         if not IS_ARABIC:
             eng_paragraph.extend([" ", Paragraph(eng_text, eng_word_style), " "])
 
-        root_table = Table([eng_paragraph, ["  ", ArParagraph(ara_text, root_style), " "]], )
+        root_subtable_data = [eng_paragraph, ["  ", ArParagraph(ara_text, root_style), " "]]
+        if SINGLE_COLUMN:
+            for row in root_subtable_data:
+                row[:] = [" "] * 2 + row + [" "] * 2
+        root_table = Table(root_subtable_data, )
+
         style_list = get_root_subtable_style()
         root_table.setStyle(style_list)
         padding_table = Table([[""]], )
@@ -67,71 +72,28 @@ def generate_content_tables(source_data, page_width, q_mapper):
     source_data = canonicalize_entered_words(source_data, q_mapper)
     trans_lookup = load_translation()
 
-    centered_numeral_style, centered_text_eng_style, english_root_style, centered_text_ar_style, trans_style = generate_styles()
-
+    styles = generate_styles()
+    styles["quranic_styles"] = quranic_styles
     tables = []
     last_root = None
     for root, entries in source_data:
         root_header = generate_root_header(root, GENERAL_ARABIC_FONT, page_width)
         fill_data = [[root_header]] + [generate_columns_header()]
 
-        for idx in range(0, len(entries), 2): # todo single column
-            entry_right, entry_left = entries[idx], entries[idx + 1]
-            r_sura, l_sura = entry_right["sura_no"], entry_left["sura_no"]
-            r_aya, l_aya = entry_right["aya_no"], entry_left["aya_no"]
-            meta_right, meta_left = q_mapper[r_sura, r_aya], q_mapper[l_sura, l_aya]
-            left_aya_style, left_root_style = quranic_styles[meta_left["font_id"]]
-            right_aya_style, right_root_style = quranic_styles[meta_right["font_id"]]
+        if SINGLE_COLUMN:
+            added_rows, last_root = single_column_layout_generator(entries, last_root,
+                                                                   styles,
+                                                                   q_mapper, trans_lookup, )
+        else:
+            added_rows, last_root = two_column_layout_generator(entries, last_root,
+                                                                styles,
+                                                                q_mapper, trans_lookup, )
 
-            left_idx = entry_left["ar_word_id"]
-            right_idx = entry_right["ar_word_id"]
+        fill_data.extend(added_rows)
 
-            right_root = get_root_representation(meta_right, right_idx, entry_right)
-            last_root, right_root = process_current_root(last_root, right_root, (entry_right["word"], entry_right["word_en"]))
-            right_quranic_text = (get_root_subtable(right_root, right_root_style, english_root_style) +
-                                  [ArParagraph(highlight_quran(meta_right, right_idx), right_aya_style)])
-
-            left_root = get_root_representation(meta_left, left_idx, entry_left)
-            last_root, left_root = process_current_root(last_root, left_root, (entry_left["word"], entry_left["word_en"]))
-            left_quranic_text = (get_root_subtable(left_root, left_root_style, english_root_style)
-                                 + [ArParagraph(highlight_quran(meta_left, left_idx), left_aya_style), ])
-
-            if not IS_ARABIC:
-                left_quranic_text = left_quranic_text + [Paragraph(trans_lookup[l_sura, l_aya], trans_style)]
-
-                right_quranic_text = right_quranic_text + [Paragraph(trans_lookup[r_sura, r_aya], trans_style)]
-
-            #                 left_quranic_text = Paragraph(ar(
-            #                     """
-            # يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓا۟ إِذَا تَدَايَنتُم بِدَيْنٍ إِلَىٰٓ أَجَلٍۢ مُّسَمًّۭى فَٱكْتُبُوهُ ۚ وَلْيَكْتُب بَّيْنَكُمْ كَاتِبٌۢ بِٱلْعَدْلِ ۚ وَلَا يَأْبَ كَاتِبٌ أَن يَكْتُبَ كَمَا عَلَّمَهُ ٱللَّهُ ۚ فَلْيَكْتُبْ وَلْيُمْلِلِ ٱلَّذِى عَلَيْهِ ٱلْحَقُّ وَلْيَتَّقِ ٱللَّهَ رَبَّهُۥ وَلَا يَبْخَسْ مِنْهُ شَيْـًۭٔا ۚ فَإِن كَانَ ٱلَّذِى عَلَيْهِ ٱلْحَقُّ سَفِيهًا أَوْ ضَعِيفًا أَوْ لَا يَسْتَطِيعُ أَن يُمِلَّ هُوَ فَلْيُمْلِلْ وَلِيُّهُۥ بِٱلْعَدْلِ ۚ وَٱسْتَشْهِدُوا۟ شَهِيدَيْنِ مِن رِّجَالِكُمْ ۖ فَإِن لَّمْ يَكُونَا رَجُلَيْنِ فَرَجُلٌۭ وَٱمْرَأَتَانِ مِمَّن تَرْضَوْنَ مِنَ ٱلشُّهَدَآءِ أَن تَضِلَّ إِحْدَىٰهُمَا فَتُذَكِّرَ إِحْدَىٰهُمَا ٱلْأُخْرَىٰ ۚ وَلَا يَأْبَ ٱلشُّهَدَآءُ إِذَا مَا دُعُوا۟ ۚ وَلَا تَسْـَٔمُوٓا۟ أَن تَكْتُبُوهُ صَغِيرًا أَوْ كَبِيرًا إِلَىٰٓ أَجَلِهِۦ ۚ ذَٰلِكُمْ أَقْسَطُ عِندَ ٱللَّهِ وَأَقْوَمُ لِلشَّهَـٰدَةِ وَأَدْنَىٰٓ أَلَّا تَرْتَابُوٓا۟ ۖ إِلَّآ أَن تَكُونَ تِجَـٰرَةً حَاضِرَةًۭ تُدِيرُونَهَا بَيْنَكُمْ فَلَيْسَ عَلَيْكُمْ جُنَاحٌ أَلَّا تَكْتُبُوهَا ۗ وَأَشْهِدُوٓا۟ إِذَا تَبَايَعْتُمْ ۚ وَلَا يُضَآرَّ كَاتِبٌۭ وَلَا شَهِيدٌۭ ۚ وَإِن تَفْعَلُوا۟ فَإِنَّهُۥ فُسُوقٌۢ بِكُمْ ۗ وَٱتَّقُوا۟ ٱللَّهَ ۖ وَيُعَلِّمُكُمُ ٱللَّهُ ۗ وَٱللَّهُ بِكُلِّ شَىْءٍ عَلِيمٌۭ
-            #                                     """), centered_text_ar_style
-            #                 )
-            fill_data.append([
-                # left sura num
-                Paragraph(get_numerals(l_sura), centered_numeral_style),
-                # left sura name
-                get_sura_name_cells(entry_left, centered_text_eng_style, centered_text_ar_style),
-                # left aya num
-                Paragraph(get_numerals(l_aya), centered_numeral_style),
-                # left quranic text
-                left_quranic_text,
-                # padding
-                "",
-                "",
-                "",
-                # right sura num
-                Paragraph(get_numerals(r_sura), centered_numeral_style),
-                # right sura name
-                get_sura_name_cells(entry_right, centered_text_eng_style, centered_text_ar_style),
-                # right aya num
-                Paragraph(get_numerals(r_aya), centered_numeral_style),
-                # right quranic text
-                right_quranic_text,
-                # padding
-                ""
-            ])
-
-        main_table_cols = get_cols_from_ratios(GENERAL_TABLE_RATIOS, page_width * .9)
+        main_table_cols = get_cols_from_ratios(
+            GENERAL_TABLE_RATIOS_SINGLE if SINGLE_COLUMN else GENERAL_TABLE_RATIOS_DOUBLE,
+            page_width * .9)
         table = Table(fill_data, colWidths=main_table_cols, repeatRows=2, )
 
         table_style = generate_style_per_entry(fill_data)
@@ -139,6 +101,71 @@ def generate_content_tables(source_data, page_width, q_mapper):
         table.setStyle(table_style)
         tables.append(table)
     return tables
+
+
+def two_column_layout_generator(entries, last_root, styles,
+                                q_mapper, trans_lookup, ):
+    content_rows = []
+    for idx in range(0, len(entries), 2):
+        entry_right, entry_left = entries[idx], entries[idx + 1]
+
+        right_col_content, last_root = generate_entry_cells(entry_right, last_root, styles, q_mapper, trans_lookup)
+        left_col_content, last_root = generate_entry_cells(entry_left, last_root, styles, q_mapper, trans_lookup)
+
+        content_rows.append(left_col_content + ["", "", ] + right_col_content)
+    return content_rows, last_root
+
+
+def single_column_layout_generator(entries, last_root, styles,
+                                   q_mapper, trans_lookup, ):
+    content_rows = []
+    for entry_right in entries:
+        row_content, last_root = generate_entry_cells(entry_right, last_root, styles, q_mapper, trans_lookup)
+        content_rows.append(row_content)
+
+    return content_rows, last_root
+
+
+def generate_entry_cells(entry, last_root, styles, q_mapper, trans_lookup):
+    centered_numeral_style = styles["centered_numeral_style"]
+    centered_text_eng_style = styles["centered_text_eng_style"]
+    english_root_style = styles["english_root_style"]
+    centered_text_ar_style = styles["centered_text_ar_style"]
+    translation_style = styles["translation_style"]
+    quranic_styles = styles["quranic_styles"]
+
+    sura, aya = entry["sura_no"], entry["aya_no"]
+    entry_meta = q_mapper[sura, aya]
+    aya_style, quranic_style = quranic_styles[entry_meta["font_id"]]
+    idx = entry["ar_word_id"]
+    root = get_root_representation(entry_meta, idx, entry)
+    last_root, root = process_current_root(last_root, root, (entry["word"], entry["word_en"]))
+
+    root_row = get_root_subtable(root, quranic_style, english_root_style)
+
+    quranic_text = [ArParagraph(highlight_quran(entry_meta, idx), aya_style)]
+    # if any(root):
+    #     ara_text, eng_text = root
+    #     quranic_text += [Paragraph(eng_text, english_root_style)]
+    #     quranic_text += [ArParagraph(ara_text, quranic_style)]
+
+    if not IS_ARABIC:
+        quranic_text = quranic_text + [Paragraph(trans_lookup[sura, aya], translation_style)]
+
+    added_cols = [
+        # sura num
+        Paragraph(get_numerals(sura), centered_numeral_style),
+        # sura name
+        get_sura_name_cells(entry, centered_text_eng_style, centered_text_ar_style),
+        # aya num
+        Paragraph(get_numerals(aya), centered_numeral_style),
+        # quranic text
+        quranic_text,
+        # padding
+        ""
+    ]
+
+    return added_cols, last_root
 
 
 class QuranDocument(SimpleDocTemplate):
@@ -248,11 +275,12 @@ class QuranDocument(SimpleDocTemplate):
     def distribute_entries(self, source_data):
         assert sum(self.rendered_counts) == self.total_entries
         current = 0
+        entries_per_row = (1 if SINGLE_COLUMN else 2)
         distributed_data = []
         for count in self.rendered_counts:
             current_root, current_entries = source_data[current]
-            distributed_data.append((current_root, current_entries[:count * 2])) # todo single column
-            current_entries[:] = current_entries[count * 2:]
+            distributed_data.append((current_root, current_entries[:count * entries_per_row]))
+            current_entries[:] = current_entries[count * entries_per_row:]
             if len(current_entries) == 0:
                 current += 1
         return distributed_data
@@ -260,7 +288,8 @@ class QuranDocument(SimpleDocTemplate):
 
 def generate_pdf(source_path, output_path):
     source_data = load_source_data(source_path)
-    entries_per_table = [[root, len(entries) // 2] for root, entries in source_data] # todo single column
+    entries_per_row = (1 if SINGLE_COLUMN else 2)
+    entries_per_table = [[root, len(entries) // entries_per_row] for root, entries in source_data]
     register_fonts()
     p_width, p_height = A4
     pdf = QuranDocument("tmp.pdf", pagesize=(p_width, p_height), bottomMargin=.05 * p_height, topMargin=.05 * p_height)
