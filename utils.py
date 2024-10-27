@@ -148,12 +148,12 @@ def register_fonts():
         ("Arial", "Arial-Unicode-Bold.ttf"),
     ]
     for font_name, font_file in specific_fonts:
-        pdfmetrics.registerFont(TTFont(font_name, f"fonts/{font_file}"))
+        pdfmetrics.registerFont(TTFont(font_name, f"resources/fonts/{font_file}"))
 
     noto_fonts = ["Bold", "Medium", "Regular", "SemiBold", "VariableFont_wght"]
     for noto_font in noto_fonts:
         font_name = f"NotoNaskhArabic-{noto_font}"
-        pdfmetrics.registerFont(TTFont(font_name, f"fonts/{font_name}.ttf"))
+        pdfmetrics.registerFont(TTFont(font_name, f"resources/fonts/{font_name}.ttf"))
 
 
 def get_cols_from_ratios(ratios, page_width):
