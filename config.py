@@ -19,6 +19,7 @@ MUSHAF_META = "resources/quran-data.xml"
 QURAN_TEXT = "resources/quran-uthmani.xml"
 UTH_TO_SIMPLE = "resources/Uthmani to Simple Mapping.html"
 TRANSLATION_XML = "resources/english_translation.xml"
+FONT_ROOT = "resources/fonts"
 #######################################
 # fonts options
 GENERAL_ARABIC_FONT = "NotoNaskhArabic-SemiBold"

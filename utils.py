@@ -15,7 +15,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph
 
-from config import DATA_REPEAT_MULTIPLIER, INPUT_DATA, SINGLE_COLUMN
+from config import DATA_REPEAT_MULTIPLIER, INPUT_DATA, SINGLE_COLUMN, FONT_ROOT
 from config import IS_ARABIC
 from quran_data import load_quran_meta
 
@@ -137,7 +137,7 @@ class ArParagraph(Paragraph):
 
 
 def register_fonts():
-    ttf_files = sorted(glob.glob(os.path.join("fonts", "*.ttf")))
+    ttf_files = sorted(glob.glob(os.path.join(FONT_ROOT, "*.ttf")))
     for ttf_file in ttf_files:
         font_name = os.path.splitext(os.path.basename(ttf_file))[0]
         pdfmetrics.registerFont(TTFont(font_name, ttf_file))
@@ -148,12 +148,12 @@ def register_fonts():
         ("Arial", "Arial-Unicode-Bold.ttf"),
     ]
     for font_name, font_file in specific_fonts:
-        pdfmetrics.registerFont(TTFont(font_name, f"resources/fonts/{font_file}"))
+        pdfmetrics.registerFont(TTFont(font_name, os.path.join(FONT_ROOT, font_file)))
 
     noto_fonts = ["Bold", "Medium", "Regular", "SemiBold", "VariableFont_wght"]
     for noto_font in noto_fonts:
         font_name = f"NotoNaskhArabic-{noto_font}"
-        pdfmetrics.registerFont(TTFont(font_name, f"resources/fonts/{font_name}.ttf"))
+        pdfmetrics.registerFont(TTFont(font_name, os.path.join(FONT_ROOT, f"{font_name}.ttf")))
 
 
 def get_cols_from_ratios(ratios, page_width):

@@ -7,7 +7,7 @@ from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import TableStyle
 
-from config import GENERAL_ARABIC_FONT, QURAN_FONT_SIZE, QURAN_LINE_SPACING, GENERAL_ENGLISH_FONT, GENERAL_FONT_SIZE, TRANSLATION_LINE_SPACING, HEADER_PADDING, TABLE_PADDING, TABLE_BK_COLOR, QURAN_ROW_SEPARATOR, ROOT_HEADER_BK_COLOR, ROOT_BG_COLOR, ROOT_BORDER_COLOR, SINGLE_COLUMN
+from config import GENERAL_ARABIC_FONT, QURAN_FONT_SIZE, QURAN_LINE_SPACING, GENERAL_ENGLISH_FONT, GENERAL_FONT_SIZE, TRANSLATION_LINE_SPACING, HEADER_PADDING, TABLE_PADDING, TABLE_BK_COLOR, QURAN_ROW_SEPARATOR, ROOT_HEADER_BK_COLOR, ROOT_BG_COLOR, ROOT_BORDER_COLOR, SINGLE_COLUMN, FONT_ROOT
 from config import IS_ARABIC
 
 
@@ -75,7 +75,7 @@ def generate_style_per_entry(fill_data, ):
 
 def generate_quranic_paragraph_styles():
     quran_style = {}
-    for ttf_file in glob.glob(os.path.join("fonts", "p[0-9]*.ttf")):
+    for ttf_file in glob.glob(os.path.join(FONT_ROOT , "p[0-9]*.ttf")):
         font_name = os.path.splitext(os.path.basename(ttf_file))[0]
         full_aya_style = ParagraphStyle(font_name,
                                         fontName=font_name,

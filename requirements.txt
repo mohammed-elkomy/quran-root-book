@@ -1,0 +1,8 @@
+arabic_reshaper==3.0.0
+fonttools==4.53.0
+fuzzywuzzy==0.18.0
+pandas==2.2.3
+PyArabic==0.6.15
+reportlab==4.2.5
+tqdm==4.66.2
+xmltodict==0.14.2
