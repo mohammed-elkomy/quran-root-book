@@ -12,18 +12,18 @@ from config import IS_ARABIC
 
 
 def get_root_subtable_style():
-    target_cell = 3 if SINGLE_COLUMN else 1
     return [
-        ('VALIGN', (0, 0), (-1, 0), 'BOTTOM'),
-        ('VALIGN', (0, 1), (-1, 1), 'TOP'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), -2),
+        # ('VALIGN', (0, 0), (-1, 0), 'BOTTOM'),
+        # ('VALIGN', (0, 1), (-1, 1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        #
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, 0), 0),
+        ('LEFTPADDING', (0, 0), (-1, 0), 0),
 
-        ('TOPPADDING', (0, 1), (-1, 1), 2 if IS_ARABIC else -2),
-        ('BOTTOMPADDING', (0, 1), (-1, 1), 2 if IS_ARABIC else 1),
-        ('TOPPADDING', (0, 0), (-1, 0), -10 if IS_ARABIC else 1),
-
-        ('BACKGROUND', (target_cell, 0), (target_cell, -1), ROOT_BG_COLOR),
-        ('BOX', (target_cell, 0), (target_cell, -1), 1, ROOT_BORDER_COLOR)
+        ('BACKGROUND', (0, 0), (-1, -1), ROOT_BG_COLOR),
+        ('BOX', (0, 0), (-1, -1), 1, ROOT_BORDER_COLOR),
+        ('ALIGN', (0, 0), (-1, -1), "CENTER"),
     ]
 
 
@@ -53,14 +53,23 @@ def generate_style_per_entry(fill_data, ):
             table_style.add('BACKGROUND', (0, font_row_idx), (-1, font_row_idx), TABLE_BK_COLOR)
             table_style.add('FONTNAME', (0, font_row_idx), (-1, font_row_idx), general_font)
             table_style.add('FONTSIZE', (0, font_row_idx), (-1, font_row_idx), GENERAL_FONT_SIZE)
+            table_style.add('LINEBELOW', (0, font_row_idx), (-1, font_row_idx), 0.5, colors.black)
         else:
-            for col_idx, _ in enumerate(row):
-                table_style.add('BACKGROUND', (col_idx, font_row_idx), (col_idx, font_row_idx), TABLE_BK_COLOR)
-                table_style.add('LINEABOVE', (col_idx, font_row_idx), (col_idx, font_row_idx), 0.05, colors.black if QURAN_ROW_SEPARATOR else colors.transparent)
-                table_style.add('SPAN', (3, font_row_idx), (3, font_row_idx))
-                if not SINGLE_COLUMN:
-                    table_style.add('SPAN', (10, font_row_idx), (11, font_row_idx))
-                table_style.add('ALIGN', (0, font_row_idx), (-1, font_row_idx), 'CENTER')
+            merge_padding = row[4] == ""
+            table_style.add('SPAN', (3, font_row_idx), (4 if merge_padding else 3, font_row_idx))
+            if not SINGLE_COLUMN:
+                merge_padding = row[11] == ""
+                table_style.add('SPAN', (10, font_row_idx), (11 if merge_padding else 10, font_row_idx))
+
+            table_style.add('ALIGN', (0, font_row_idx), (-1, font_row_idx), 'CENTER')
+
+            table_style.add('BACKGROUND', (0, font_row_idx), (-1, font_row_idx), TABLE_BK_COLOR)
+
+            if len(row[3]) > 1:
+                table_style.add('LINEABOVE', (0, font_row_idx), (5, font_row_idx), 0.05, colors.black if QURAN_ROW_SEPARATOR else colors.transparent)
+            if not SINGLE_COLUMN and len(row[10]) > 1:
+                table_style.add('LINEABOVE', (6, font_row_idx), (-1, font_row_idx), 0.05, colors.black if QURAN_ROW_SEPARATOR else colors.transparent)
+
     return table_style
 
 
@@ -172,7 +181,3 @@ def get_generic_table_style():
         ('RIGHTPADDING', (11, 0), (12, -1), 1),
     ]
     return single_column + ([] if SINGLE_COLUMN else double_columns)
-
-
-def get_padding_table_style():
-    return [("FONTSIZE", (0, 0), (-1, -1), 1)]

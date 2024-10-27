@@ -50,17 +50,15 @@ def add_page_bookmarks(canvas, doc, bookmarks_lookup):
 
 
 def extract_root_tables_from_super_table(table, ):
-    root_tables_cols_num = 7 if SINGLE_COLUMN else 3
-    center_idx = root_tables_cols_num // 2
     found_root_subtables = []
     for row in table._cellvalues:
         for cell in row:
             for element in cell:
-                if isinstance(element, Table) and element._ncols == root_tables_cols_num and element._bkgrndcmds[-1][-1] == ROOT_BG_COLOR:
+                if isinstance(element, Table) and element._ncols == 1 and element._bkgrndcmds[-1][-1] == ROOT_BG_COLOR: # TODO
                     found_root_subtables.append(element)
     roots_in_page = []
     for table in found_root_subtables:
-        root_text = table._cellvalues[1 if IS_ARABIC else 0][center_idx][0].text
-        font_name = table._cellvalues[1 if IS_ARABIC else 0][center_idx][0].style.fontName
+        root_text = table._cellvalues[0][0][0].text
+        font_name = table._cellvalues[0][0][0].style.fontName
         roots_in_page.append((font_name, root_text))
     return roots_in_page

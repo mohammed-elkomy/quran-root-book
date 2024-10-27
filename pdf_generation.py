@@ -6,8 +6,9 @@ from copy import deepcopy
 from functools import partial
 
 from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import inch
 from reportlab.pdfgen import canvas
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Table
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, Spacer
 from reportlab.platypus.doctemplate import _doNothing
 from tqdm import tqdm
 
@@ -16,7 +17,7 @@ from config import GENERAL_ARABIC_FONT, GENERAL_TABLE_RATIOS_SINGLE, GENERAL_TAB
 from config import IS_ARABIC
 from headers_helpers import generate_columns_header, generate_root_header
 from quran_data import load_translation, create_font_text_mapping
-from styles_helpers import generate_quranic_paragraph_styles, generate_styles, generate_style_per_entry, get_root_subtable_style, get_padding_table_style
+from styles_helpers import generate_quranic_paragraph_styles, generate_styles, generate_style_per_entry, get_root_subtable_style
 from utils import ArParagraph, get_numerals, load_source_data, is_non_decreasing, canonicalize_entered_words, register_fonts, get_sura_name_cells, get_cols_from_ratios
 
 
@@ -48,23 +49,22 @@ def process_current_root(last_root, current_root, root_text):
 def get_root_subtable(root_text, root_style, eng_word_style):
     if any(root_text):
         ara_text, eng_text = root_text
-        eng_paragraph = []
-        if not IS_ARABIC:
-            eng_paragraph.extend([" ", Paragraph(eng_text, eng_word_style), " "])
 
-        root_subtable_data = [eng_paragraph, ["  ", ArParagraph(ara_text, root_style), " "]]
-        if SINGLE_COLUMN:
-            for row in root_subtable_data:
-                row[:] = [" "] * 2 + row + [" "] * 2
-        root_table = Table(root_subtable_data, )
+        if IS_ARABIC:
+            table = Table([
+                [ArParagraph(ara_text, root_style)]
+            ])
+        else:
+            table = Table(
+                [
+                    [Paragraph(eng_text, eng_word_style)],
+                    [ArParagraph(ara_text, root_style)]
+                ])
 
-        style_list = get_root_subtable_style()
-        root_table.setStyle(style_list)
-        padding_table = Table([[""]], )
-        padding_table.setStyle(get_padding_table_style())
-        return [root_table, padding_table]
+        table.setStyle(get_root_subtable_style())
+        return table
     else:
-        return []
+        return ""
 
 
 def generate_content_tables(source_data, page_width, q_mapper):
@@ -111,6 +111,19 @@ def two_column_layout_generator(entries, last_root, styles,
 
         right_col_content, last_root = generate_entry_cells(entry_right, last_root, styles, q_mapper, trans_lookup)
         left_col_content, last_root = generate_entry_cells(entry_left, last_root, styles, q_mapper, trans_lookup)
+        right_root_table = right_col_content[-1]
+        left_root_table = left_col_content[-1]
+        right_col_content[-1] = left_col_content[-1] = ""
+        if right_root_table:
+            right_root_table._argW = [0.75 * inch]
+            right_col_content[3] = [right_root_table] + [Spacer(1, 6)] + right_col_content[3]
+            for shift_cell in range(3):
+                right_col_content[shift_cell] = [Spacer(1, 22)] + [right_col_content[shift_cell]]
+        if left_root_table:
+            left_root_table._argW = [0.75 * inch]
+            left_col_content[3] = [left_root_table] + [Spacer(1, 12)] + left_col_content[3]
+            for shift_cell in range(3):
+                left_col_content[shift_cell] = [Spacer(1, 22)] + [left_col_content[shift_cell]]
 
         content_rows.append(left_col_content + ["", "", ] + right_col_content)
     return content_rows, last_root
@@ -141,13 +154,9 @@ def generate_entry_cells(entry, last_root, styles, q_mapper, trans_lookup):
     root = get_root_representation(entry_meta, idx, entry)
     last_root, root = process_current_root(last_root, root, (entry["word"], entry["word_en"]))
 
-    root_row = get_root_subtable(root, quranic_style, english_root_style)
+    root_table = get_root_subtable(root, quranic_style, english_root_style)
 
     quranic_text = [ArParagraph(highlight_quran(entry_meta, idx), aya_style)]
-    # if any(root):
-    #     ara_text, eng_text = root
-    #     quranic_text += [Paragraph(eng_text, english_root_style)]
-    #     quranic_text += [ArParagraph(ara_text, quranic_style)]
 
     if not IS_ARABIC:
         quranic_text = quranic_text + [Paragraph(trans_lookup[sura, aya], translation_style)]
@@ -161,8 +170,8 @@ def generate_entry_cells(entry, last_root, styles, q_mapper, trans_lookup):
         Paragraph(get_numerals(aya), centered_numeral_style),
         # quranic text
         quranic_text,
-        # padding
-        ""
+        # root word
+        root_table
     ]
 
     return added_cols, last_root

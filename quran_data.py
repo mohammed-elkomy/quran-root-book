@@ -260,6 +260,6 @@ if __name__ == "__main__":
     for entry in quran_text_to_font:
         entry["simple"] = [uth_to_simple[w] for w in entry["uthmani_tokens"]]
 
-    with open('resources/quran_text_to_font.json', 'w') as f:
+    with open('font demo/quran_text_to_font.json', 'w') as f:
         json.dump(quran_text_to_font, f)
-    print("resources/quran_text_to_font.json has been saved")
+    print("font demo/quran_text_to_font.json has been saved")
