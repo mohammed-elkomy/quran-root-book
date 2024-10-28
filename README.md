@@ -109,16 +109,19 @@ Customize the colors for various PDF components:
    ``` 
 
 ## Docker
-You can simply run: (root access might be needed)  
+
+You can simply run: (root access might be needed)
+
    ```bash
    ./docker_demo.sh
    ```
+
 ## Usage
 
 1. First, modify the configurations in the config.py file
 2. Then, to generate the PDF report, assuming all resource file are found, simply run:
-```
-python
+
+```bash
 python main.py
 ```
 
@@ -127,6 +130,7 @@ python main.py
 Dependencies are listed in requirements.txt. Run pip install -r requirements.txt to install them.
 
 ## Output File Naming Convention
+
 The output is saved the `output` directory. The output file name will be in the format: `{current_date}-report.pdf`.
 
 ```
