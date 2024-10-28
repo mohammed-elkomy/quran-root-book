@@ -44,7 +44,7 @@ ROOT_BORDER_COLOR = colors.Color(red=0, green=0, blue=0)
 ROOT_BG_COLOR = colors.Color(red=0.8, green=0.2, blue=0.0, alpha=0.1)
 ###################################
 # layout options
-IS_ARABIC = True  # Globalisation
+IS_ARABIC = False  # Globalisation
 
 TABLE_PADDING = 3
 QURAN_LINE_SPACING = 13
@@ -78,10 +78,10 @@ GENERAL_TABLE_RATIOS_DOUBLE = [1.25, 2.5, 1.25, 7, 3,
 GENERAL_TABLE_RATIOS_SINGLE = [.75, 1.5, .75, 8, 1, .5, ]  # 6 columns design
 HEADER_TABLE_RATIOS_SINGLE = [6, 14.3, 6, .99]
 
-SINGLE_COLUMN = False
+SINGLE_COLUMN = True
 ###################################
 # FOR TESTING
 DATA_REPEAT_MULTIPLIER = 1
 
 # Dynamically create the output PDF filename based on date and conditions
-OUTPUT_PDF = f"{current_date}_{'single' if SINGLE_COLUMN else 'double'}_{'arabic' if IS_ARABIC else 'non-arabic'}_{'sep' if QURAN_ROW_SEPARATOR else 'nosep'}.pdf"
+OUTPUT_PDF = f"output/{current_date}_{'single' if SINGLE_COLUMN else 'double'}_{'arabic' if IS_ARABIC else 'non-arabic'}_{'sep' if QURAN_ROW_SEPARATOR else 'nosep'}.pdf"
